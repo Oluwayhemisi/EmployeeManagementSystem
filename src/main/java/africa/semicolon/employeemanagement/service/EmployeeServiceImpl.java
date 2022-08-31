@@ -5,81 +5,94 @@ import africa.semicolon.employeemanagement.data.model.enums.JobPosition;
 import africa.semicolon.employeemanagement.data.model.enums.Salary;
 import africa.semicolon.employeemanagement.data.repositories.EmployeeRepository;
 import africa.semicolon.employeemanagement.dto.requests.CreateEmployeeRequest;
-import africa.semicolon.employeemanagement.dto.responses.CreateEmployeeResponse;
+import africa.semicolon.employeemanagement.dto.requests.UpdateRequest;
+import africa.semicolon.employeemanagement.dto.responses.EmployeeResponse;
 import africa.semicolon.employeemanagement.dto.responses.DeleteEmployeeResponse;
-import africa.semicolon.employeemanagement.dto.responses.FindEmployeeResponse;
-import africa.semicolon.employeemanagement.dto.responses.UpdateResponse;
-import africa.semicolon.employeemanagement.exceptions.DuplicateEmailException;
 import africa.semicolon.employeemanagement.exceptions.EmployeeException;
-import africa.semicolon.employeemanagement.exceptions.ResourceNotFoundException;
-import africa.semicolon.employeemanagement.utils.Mapper;
 import lombok.extern.slf4j.Slf4j;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
 public class EmployeeServiceImpl implements EmployeeService{
+
     @Autowired
-   private EmployeeRepository employeeRepository;
+   private  EmployeeRepository employeeRepository;
+
+   @Autowired
+   private ModelMapper modelMapper;
 
 
     @Override
-    public CreateEmployeeResponse create(CreateEmployeeRequest request) {
-       Employee employee = employeeRepository.findByEmail(request.getEmail());
-           if (employee != null){ throw new DuplicateEmailException(request.getEmail() + "already exist");}
-           employee = new Employee();
-           Mapper.map(request, employee);
+    public EmployeeResponse createEmployeeAccount(CreateEmployeeRequest request) throws EmployeeException{
+        validateEmployeeEmail(request.getEmail());
+
+        Employee employee = modelMapper.map(request, Employee.class);
            employee.setSalary(employeeSalaryBasedOnLevel(request.getJobPosition()));
-           employee.setEmployeeId(generateId(request.getEmployeeId()));
+           employee.setEmployeeId(generateId());
+        log.info("Before saving");
            Employee savedEmployee = employeeRepository.save(employee);
+           log.info("Employee saved -> {}",savedEmployee.getEmployeeId());
 
+           return modelMapper.map(savedEmployee, EmployeeResponse.class);
 
-
-           CreateEmployeeResponse response = new CreateEmployeeResponse();
-           Mapper.map(savedEmployee,response);
-           return response;
        }
 
-
-
     @Override
-    public FindEmployeeResponse findEmployeeByName(String firstName) {
-        Employee employee = employeeRepository.findEmployeeByFullName(firstName);
-        if (employee == null) {
-            throw new ResourceNotFoundException("Employee Not Found");
-        }
-        FindEmployeeResponse response = new FindEmployeeResponse();
-        response.setFullName(employee.getFirstName() + " " + employee.getLastName());
-        response.setEmail(employee.getEmail());
-        return response;
-
-
+    public EmployeeResponse findEmployeeByEmployeeId(String employeeId) throws EmployeeException{
+        Employee employee = employeeRepository.findByEmployeeId(employeeId).orElseThrow(()-> new EmployeeException("Employee Id does not exist",404));
+        return modelMapper.map(employee,EmployeeResponse.class);
     }
 
+    private void validateEmployeeEmail(String email) {
+        Optional <Employee> employee = employeeRepository.findByEmail(email);
+        if (employee.isPresent()){ throw new EmployeeException("Email already exist",404);}
+    }
+
+
     @Override
-    public UpdateResponse updateEmployee(String name, Employee employeeDetails) {
-        Employee updateEmployee = employeeRepository.findEmployeeByFullName(name);
-        if(updateEmployee == null){
-            throw new ResourceNotFoundException("Employee Not found");
+    public EmployeeResponse updateEmployee(String employeeId, String email, UpdateRequest updateRequest) {
+        Employee updatedEmployee = employeeRepository.findByEmployeeId(employeeId).orElseThrow(()-> new EmployeeException("Employee id not found",404));
+        if(updatedEmployee.getFirstName().length() > 0){
+            updatedEmployee.setFirstName(updateRequest.getFirstName());
         }
-        Mapper.map(updateEmployee,employeeDetails);
+        if(updatedEmployee.getLastName().length() > 0){
+            updatedEmployee.setLastName(updateRequest.getLastName());
+        }
+        if(updatedEmployee.getAddress().length() > 0){
+            updatedEmployee.setAddress(updatedEmployee.getAddress());
+        }
+        if(updatedEmployee.getPhoneNumber().length() > 0){
+            updatedEmployee.setPhoneNumber(updateRequest.getPhoneNumber());
+        }
+        if(updatedEmployee.getSchoolQualification().toString().length() > 0){
+            updatedEmployee.setSchoolQualification(updateRequest.getSchoolQualification());
+        }
+        if(updatedEmployee.getPassword().length() > 0){
+            updatedEmployee.setPassword(updateRequest.getPassword());
+        }
+        if(updatedEmployee.getJobPosition().toString().length() > 0){
+            updatedEmployee.setJobPosition(updateRequest.getJobPosition());
+        }
+        validateEmployeeEmail(email);
+        updatedEmployee.setEmail(updateRequest.getEmail());
+        Employee savedEmployee = employeeRepository.save(updatedEmployee);
+        return modelMapper.map(savedEmployee,EmployeeResponse.class);
 
-        UpdateResponse response = new UpdateResponse();
-        response.setMessage(updateEmployee +"with "+ employeeDetails+" has been updated");
 
-
-        return response;
     }
 
     @Override
     public List<Employee> getAllEmployee() {
             List<Employee> employeeList = employeeRepository.findAll();
             if (employeeList.isEmpty()) {
-                throw new EmployeeException("Employee list is empty");
+                throw new EmployeeException("Employee list is empty",404);
             }
             return employeeList;
 
@@ -87,33 +100,39 @@ public class EmployeeServiceImpl implements EmployeeService{
 
     @Override
     public Salary employeeSalaryBasedOnLevel(JobPosition jobPosition) {
-        Employee employee = new Employee();
         if(jobPosition == JobPosition.INTERNSHIP){
-            employee.setSalary(Salary.TWO_HUNDRED_THOUSAND);
+            return Salary.TWO_HUNDRED_THOUSAND;
         }
         else if(jobPosition == JobPosition.ENTRY_LEVEL){
-            employee.setSalary(Salary.TWO_HUNDRED_THOUSAND);
+            return Salary.TWO_HUNDRED_THOUSAND;
         }
         else  if (jobPosition == JobPosition.MID_LEVEL){
-            employee.setSalary(Salary.FIVE_HUNDRED_THOUSAND);
+            return Salary.FIVE_HUNDRED_THOUSAND;
         }
         else if (jobPosition == JobPosition.SENIOR){
-            employee.setSalary(Salary.EIGHT_HUNDRED_THOUSAND);
+            return Salary.EIGHT_HUNDRED_THOUSAND;
         }
-
-        employeeRepository.save(employee);
-        return employee.getSalary();
+        throw new EmployeeException("salary range not found!",400);
     }
 
     @Override
-    public DeleteEmployeeResponse deleteEmployee(Employee employee) {
-        return null;
+    public void deleteAllEmployee(Employee employee) {
+        employeeRepository.deleteAll();
+    }
+
+    @Override
+    public DeleteEmployeeResponse deleteEmployee(String employeeId) throws EmployeeException{
+        Employee  findEmployee = employeeRepository.findByEmployeeId(employeeId).orElseThrow(()-> new EmployeeException("Employee id cannot be found",404));
+        employeeRepository.delete(findEmployee);
+
+        return modelMapper.map(findEmployee,DeleteEmployeeResponse.class);
     }
 
 
-    private String generateId(String employeeId){
+
+    private String generateId(){
         int number = employeeRepository.findAll().size();
-        String id = String.format("%02d",number);
+        String id = String.format("%02d",number+1);
         return "Em"+ id;
     }
 

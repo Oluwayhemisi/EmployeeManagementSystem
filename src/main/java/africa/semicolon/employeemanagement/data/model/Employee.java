@@ -11,7 +11,8 @@ import javax.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 
-@Data
+@Setter
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 @Validated
@@ -30,7 +31,7 @@ public class Employee {
     @NotBlank
     private String lastName;
 
-    private String Address;
+    private String address;
 
     @Email
     @NotNull
@@ -48,12 +49,12 @@ public class Employee {
     @Enumerated(EnumType.STRING)
     private Salary salary;
 
-    @Getter(AccessLevel.PRIVATE)
-    private String passWord;
+//    @Getter(AccessLevel.PRIVATE)
+    private String password;
 
     @NotNull
     @NotBlank
-    private String EmployeeId;
+    private String employeeId;
 
     private LocalDateTime dateRegistered = LocalDateTime.now();
 
