@@ -1,5 +1,6 @@
 package africa.semicolon.employeemanagement.dto.requests;
 
+import africa.semicolon.employeemanagement.data.model.enums.Department;
 import africa.semicolon.employeemanagement.data.model.enums.Gender;
 import africa.semicolon.employeemanagement.data.model.enums.JobPosition;
 import africa.semicolon.employeemanagement.data.model.enums.Qualification;
@@ -21,5 +22,6 @@ public class CreateEmployeeRequest {
     private String phoneNumber;
     private String password;
     private JobPosition jobPosition;
+    private Department department;
 
 }

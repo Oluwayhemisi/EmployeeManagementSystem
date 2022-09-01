@@ -1,7 +1,7 @@
 package africa.semicolon.employeemanagement.dto.requests;
 
 
-import africa.semicolon.employeemanagement.data.model.enums.Gender;
+
 import africa.semicolon.employeemanagement.data.model.enums.JobPosition;
 import africa.semicolon.employeemanagement.data.model.enums.Qualification;
 import lombok.AllArgsConstructor;
